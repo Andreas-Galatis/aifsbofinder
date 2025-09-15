@@ -1,0 +1,7 @@
+/*
+  Access-Control-Allow-Origin: https://marketplace.leadconnectorhq.com
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization, x-sso-session
+  Access-Control-Allow-Credentials: true
+  X-Frame-Options: ALLOW-FROM https://app.gohighlevel.com https://marketplace.leadconnectorhq.com
+  Content-Security-Policy: frame-ancestors 'self' https://app.gohighlevel.com https://marketplace.leadconnectorhq.com https://app.leadconnectorhq.com https://app.airealestatesolutions.com

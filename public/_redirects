@@ -1,0 +1,4 @@
+/oauth/sso/*  https://marketplace.leadconnectorhq.com/oauth/sso/:splat  200!
+/api/*  https://marketplace.leadconnectorhq.com/api/:splat  200!
+/services/*  https://services.leadconnectorhq.com/:splat  200!
+/*  /index.html  200
