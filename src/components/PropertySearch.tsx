@@ -13,7 +13,7 @@ import SearchFilters from './SearchFilters';
 import AutomatedSearch from './AutomatedSearch';
 
 export const PropertySearch: React.FC = () => {
-  // Main search parameters state
+  // Main search parameters state - FSBO focused
   const [searchParams, setSearchParams] = useState({
     location: '',
     state: '',
@@ -28,7 +28,7 @@ export const PropertySearch: React.FC = () => {
     minYear: '',
     maxYear: '',
     homeType: [] as string[],
-    listingType: 'by_agent'
+    listingType: 'by_owner' // Force FSBO only
   });
 
   // State for storing agent details as they load
@@ -68,11 +68,10 @@ export const PropertySearch: React.FC = () => {
     try {
       // export properties sequentially
       for (const property of propertiesToExport) {
-        await exportToGHL(property, searchParams);
+        await exportToGHL(property);
       }
-      //await Promise.all(propertiesToExport.map(property => exportToGHL(property, searchParams)));
       toast.success('Properties exported to AIRES AI successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to export properties to AIRES AI');
     }
   };
@@ -99,8 +98,8 @@ export const PropertySearch: React.FC = () => {
         listingAgent: agentDetails[property.id] || property.listingAgent,
       }));
       await exportProperties(propertiesWithAgents);
-      
-    } catch (error) {
+
+    } catch {
       toast.error('Failed to perform search');
     }
   };
@@ -142,7 +141,7 @@ export const PropertySearch: React.FC = () => {
 
     try {
       await refetch(); // Trigger the query hook
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch properties. Please try again.');
     } finally {
       setIsSearching(false); // Mark search as complete
@@ -158,6 +157,14 @@ export const PropertySearch: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Find FSBO Properties
+          </h2>
+          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+            For Sale By Owner Only
+          </span>
+        </div>
         {/* Search Input Fields */}
         <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
           <div className="flex-1">

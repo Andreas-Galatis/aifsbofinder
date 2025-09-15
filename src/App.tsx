@@ -50,7 +50,7 @@ const App: React.FC = () => {
                       <div className="flex items-center space-x-3">
                         <Building2 className="h-8 w-8 text-aires-blue" />
                         <div>
-                          <h1 className="text-xl font-bold text-aires-darkGray">AIRES Property Finder</h1>
+                          <h1 className="text-xl font-bold text-aires-darkGray">AIRES FSBO Finder</h1>
                           <p className="text-sm text-aires-gray">Property Data Integration</p>
                         </div>
                       </div>

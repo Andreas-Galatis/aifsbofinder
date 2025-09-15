@@ -74,88 +74,67 @@ const mapProperty = (property: any) => {
 };
 
 
-const getListingAgentDetails = async (zpid: string, listingType: string) => {
+const getListingAgentDetails = async (zpid: string) => {
   try {
     await delay(500);
     const response = await propertyApi.get('/propertyV2', {
       params: { zpid }
     });
 
-    // Log the response to debug
-    console.log('Property Details Response:', response.data);
-
     const propertyData = response.data || {};
     const yearBuilt = response.data?.yearBuilt;
     const county = response.data?.county;
-    const attributionInfo = response.data?.attributionInfo || {};
 
-    // check if FSBO
-    if (propertyData.listing_sub_type.is_FSBO === true) {
-      listingType = 'by_owner_other';
-    } else { listingType = 'by_agent'; }
+    // Check if property is FSBO
+    const isFSBO = propertyData.listing_sub_type?.is_FSBO === true ||
+                   propertyData.listingAgent?.brokerName === 'For Sale By Owner';
 
-
-    // Add FSBO phone number handling
-    if (listingType === 'by_owner_other') {
-      // Extract FSBO phone from listedBy array if available
-      const listedBy = propertyData.listedBy || [];
-      console.log('ListedBy data:', listedBy);
-
-      //const phoneElement = listedBy[0]?.elements?.find(item => item.id === 'PHONE');
-      //const fsboPhone = phoneElement?.text || 'N/A';
-      const fsboPhone = (`${response.data?.listing_agent.phone.areacode || ''} ${response.data?.listing_agent.phone.prefix || ''} ${response.data?.listing_agent.phone.number || ''}`) || 'N/A';
-      console.log('FSBO phone:', fsboPhone);
-      
-      
-      return {
-        name: 'Property Owner', // Default name for FSBO
-        brokerName: 'For Sale By Owner',
-        phone: fsboPhone || 'N/A',
-        email: 'N/A',
-        photo: null,
-        yearBuilt: yearBuilt || null,
-        county: county || 'N/A'
-      };
+    if (!isFSBO) {
+      // Skip non-FSBO properties
+      return null;
     }
-    
+
+    // Extract FSBO phone number
+    const fsboPhone = propertyData.listing_agent?.phone ?
+      `${propertyData.listing_agent.phone.areacode || ''} ${propertyData.listing_agent.phone.prefix || ''} ${propertyData.listing_agent.phone.number || ''}`.trim() :
+      'N/A';
+
     return {
-      name: attributionInfo.agentName || 'N/A',
-      brokerName: attributionInfo.brokerName || 'N/A',
-      phone: attributionInfo.agentPhoneNumber || 'N/A',
-      email: attributionInfo.agentEmail || 'N/A',
+      name: 'Property Owner',
+      brokerName: 'For Sale By Owner',
+      phone: fsboPhone || 'N/A',
+      email: 'N/A',
       photo: null,
       yearBuilt: yearBuilt || null,
-      county: county || 'N/A'
+      county: county || 'N/A',
+      isFSBO: true
     };
-
-    
-
   } catch (error) {
-    console.warn('Failed to fetch agent details:', error);
-    return {
-      name: 'N/A',
-      brokerName: 'N/A',
-      phone: 'N/A',
-      email: 'N/A',
-      photo: null
-    };
+    console.warn('Failed to fetch property details:', error);
+    return null;
   }
 };
 
-// Main search function
+// Main search function - FSBO ONLY
 export const searchProperties = async (
   params: SearchParams,
   onPageLoaded: (pageProperties: any[]) => void
 ) => {
   try {
+    // Force FSBO listing type
+    const searchParams = {
+      ...params,
+      listingType: 'by_owner' // Force FSBO only
+    };
+
     // Initialize all property types as false
     const propertyTypeParams = Object.fromEntries(
       allPropertyTypes.map(type => [type, false])
     );
 
     // If specific types are selected, set only those to true
-    if (params.homeType.length > 0) {
-      params.homeType.forEach(type => {
+    if (searchParams.homeType.length > 0) {
+      searchParams.homeType.forEach(type => {
         if (propertyTypeMap[type]) {
           propertyTypeParams[propertyTypeMap[type]] = true;
         }
@@ -167,7 +146,6 @@ export const searchProperties = async (
       });
     }
 
-    //const MAX_PAGES = 20;
     const allProperties: any[] = [];
     let totalPages = 1; // Default to 1 in case totalPages is not available
 
@@ -175,30 +153,28 @@ export const searchProperties = async (
       const fetchPage = async () => {
         const response = await propertyApi.get('/search', {
           params: {
-            location: `${params.location}, ${params.state}`,
+            location: `${searchParams.location}, ${searchParams.state}`,
             status: 'forSale',
-            page: page.toString(), // Dynamic page number
-            price_min: params.minPrice || '0',
-            price_max: params.maxPrice || '10000000',
-            beds_min: params.beds || '0',
-            baths_min: params.baths || '0',
-            sqft_min: params.minSqft || '0',
-            sqft_max: params.maxSqft || '10000000',
-            built_min: params.minYear || '1800',
-            built_max: params.maxYear || '2025',
-            listing_type: params.listingType,
-            isForSaleByOwner: params.listingType === 'by_owner_other' ? 'true' : 'false',
-            isForSaleByAgent: params.listingType === 'by_agent' ? 'true' : 'false',
+            for_sale_by_owner: 'true', // Add FSBO filter
+            page: page.toString(),
+            price_min: searchParams.minPrice || '0',
+            price_max: searchParams.maxPrice || '10000000',
+            beds_min: searchParams.beds || '0',
+            baths_min: searchParams.baths || '0',
+            sqft_min: searchParams.minSqft || '0',
+            sqft_max: searchParams.maxSqft || '10000000',
+            built_min: searchParams.minYear || '1800',
+            built_max: searchParams.maxYear || '2025',
+            isForSaleByOwner: 'true', // Force FSBO
+            isForSaleByAgent: 'false', // Exclude agent listings
             isForSaleForeclosure: 'false',
             isAuction: 'false',
-
             ...propertyTypeParams,
           },
         });
 
-        
-        console.log('Search Params:', response.config.params);
-        console.log('Property Search Response:',page, response.data);
+        console.log('FSBO Search Params:', response.config.params);
+        console.log('FSBO Property Search Response:', page, response.data);
 
         const pageProperties = (response.data.results || []).map(mapProperty);
         allProperties.push(...pageProperties);
@@ -210,33 +186,40 @@ export const searchProperties = async (
           totalPages = response.data.totalPages;
         }
 
-        return pageProperties.length > 0; // Return whether there are more results
+        return pageProperties.length > 0;
       };
 
-      // Fetch the page and limit the rate
       const hasMore = await fetchPage();
       if (!hasMore) break;
 
       // Rate limit: 2 calls per second
-      await delay(500); // 500 ms between calls
+      await delay(500);
     }
 
-      return {
-        properties: allProperties,
-        total: allProperties.length,
-        loadAgentDetails: async (onAgentDetailsLoaded: (propertyId: string, agentDetails: any) => void) => {
-          for (const property of allProperties) {
-            // Pass listingType to getListingAgentDetails
-            const agentDetails = await getListingAgentDetails(property.id, params.listingType);
-            if (agentDetails.yearBuilt) {
-              property.yearBuilt = agentDetails.yearBuilt;
-            }
-            property.county = agentDetails.county;
-            onAgentDetailsLoaded(property.id, agentDetails);
-          }
-        },
-      };
-    
+    // Filter to only include FSBO properties
+    const fsboProperties = [];
+
+    for (const property of allProperties) {
+      const agentDetails = await getListingAgentDetails(property.id);
+      if (agentDetails && agentDetails.isFSBO) {
+        property.listingAgent = agentDetails;
+        property.yearBuilt = agentDetails.yearBuilt;
+        property.county = agentDetails.county;
+        fsboProperties.push(property);
+      }
+    }
+
+    return {
+      properties: fsboProperties,
+      total: fsboProperties.length,
+      loadAgentDetails: async (callback) => {
+        // Agent details already loaded during filtering
+        fsboProperties.forEach(property => {
+          callback(property.id, property.listingAgent);
+        });
+      }
+    };
+
   } catch (error) {
     handleError(error);
   }

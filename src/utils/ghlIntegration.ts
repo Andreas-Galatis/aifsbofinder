@@ -5,8 +5,6 @@
 import axios from 'axios';
 import { PropertyData } from '../types';
 import { isTokenExpired } from '../services/ghlAuth';
-import { SearchParams } from '../types';
-import PropertySearch from '../components/PropertySearch';
 
 
 const GHL_API_BASE = 'https://services.leadconnectorhq.com';
@@ -153,7 +151,7 @@ const createOrUpdateContact = async (
 /**
  * Exports property data to GHL as a contact
  */
-export const exportToGHL = async (propertyData: PropertyData, searchParams: any): Promise<void> => {
+export const exportToGHL = async (propertyData: PropertyData): Promise<void> => {
   console.log('📤 Starting export to GHL:', propertyData);
 
   const token = localStorage.getItem('ghl_access_token');
@@ -195,12 +193,12 @@ export const exportToGHL = async (propertyData: PropertyData, searchParams: any)
       propertyData.listingAgent.phone
     );
 
-    // Prepare contact data
+    // Prepare contact data with FSBO-specific information
     const contactData = {
-      firstName,
-      lastName,
-      name: propertyData.listingAgent.name,
-      phone: propertyData.listingAgent.phone !== 'N/A' 
+      firstName: 'FSBO',
+      lastName: propertyData.address.split(',')[0],
+      name: `FSBO - ${propertyData.address}`,
+      phone: propertyData.listingAgent.phone !== 'N/A'
         ? formatPhoneNumber(propertyData.listingAgent.phone)
         : null,
       address1: propertyData.address,
@@ -209,17 +207,25 @@ export const exportToGHL = async (propertyData: PropertyData, searchParams: any)
       postalCode: propertyData.zipCode,
       website: propertyData.zillowLink,
       country: 'US',
-      companyName: propertyData.listingAgent.brokerName || null,
-      source: 'AIRES Property Finder',
-      tags: [ 
-        'ai-property-finder',
-        propertyData.propertyType, 
-        propertyData.city, 
+      companyName: 'For Sale By Owner',
+      source: 'AIRES FSBO Finder',
+      tags: [
+        'ai-fsbo-finder',
+        'FSBO',
+        'for-sale-by-owner',
+        propertyData.propertyType,
+        propertyData.city,
         propertyData.state,
         propertyData.county,
-        `${searchParams.location} ${searchParams.state} ${new Date().toLocaleDateString()}`,
-        propertyData.listingAgent.brokerName === 'For Sale By Owner' ? 'FSBO' : 'Agent Listed',
-      ]
+        `fsbo-${new Date().toLocaleDateString()}`,
+      ],
+      customFields: {
+        property_price: propertyData.price,
+        beds: propertyData.beds,
+        baths: propertyData.baths,
+        sqft: propertyData.sqft,
+        year_built: propertyData.yearBuilt
+      }
     };
 
     console.log('📝 Prepared contact data:', contactData);

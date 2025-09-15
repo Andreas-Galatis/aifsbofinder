@@ -56,7 +56,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ searchParams, setSearchPa
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-        {/* Listing Type Filter */}
+        {/* Listing Type Filter 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-aires-darkGray mb-1">
             <div className="flex items-center">
@@ -69,10 +69,11 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ searchParams, setSearchPa
             onChange={(e) => setSearchParams({ ...searchParams, listingType: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aires-green focus:border-transparent"
           >
-            <option value="by_agent">Listed by Agent</option>
+            <option value="by_agent">Listed by Agent</option> 
             <option value="by_owner_other">For Sale by Owner</option>
           </select>
         </div>
+        */}
 
         {/* Price Range Filter */}
         <div className="space-y-2">
