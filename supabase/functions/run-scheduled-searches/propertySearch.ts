@@ -1,44 +1,10 @@
-import axios, { AxiosError } from 'axios';
-import { SearchParams } from '../types';
+import { SearchParams, PropertyData } from './types.ts';
 
-const RAPID_API_KEY = import.meta.env.VITE_RAPID_API_KEY;
-const RAPID_API_HOST = import.meta.env.VITE_RAPID_API_HOST;
-
-export const propertyApi = axios.create({
-  baseURL: `https://${RAPID_API_HOST}`,
-  headers: {
-    'X-RapidAPI-Key': RAPID_API_KEY,
-    'X-RapidAPI-Host': RAPID_API_HOST,
-  },
-});
+const RAPID_API_HOST = Deno.env.get('RAPID_API_HOST');
+const RAPID_API_KEY = Deno.env.get('RAPID_API_KEY');
+const GOOGLE_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY');
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-const handleError = (error: unknown) => {
-  if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError;
-    throw {
-      message: axiosError.message,
-      status: axiosError.response?.status,
-      data: axiosError.response?.data
-    };
-  }
-  throw { message: 'An unexpected error occurred' };
-};
-
-// Property type mapping with API parameters
-const propertyTypeMap = {
-  'Houses': 'isSingleFamily',
-  'Apartments': 'isApartment',
-  'Condos': 'isCondo',
-  'Townhomes': 'isTownhouse',
-  'Manufactured': 'isManufactured',
-  'Lots/Land': 'isLotLand',
-  'Multi-family': 'isMultiFamily'
-};
-
-// All property type parameters
-const allPropertyTypes = Object.values(propertyTypeMap);
 
 const mapProperty = (property: any) => {
   // Format address for URL
@@ -72,7 +38,6 @@ const mapProperty = (property: any) => {
     }
   };
 };
-
 
 const getListingAgentDetails = async (zpid: string) => {
   try {
@@ -222,43 +187,6 @@ export const searchProperties = async (
       }
     };
 
-  } catch (error) {
-    handleError(error);
-  }
-};
-
-// Get property details by ZPID
-export const getPropertyDetails = async (propertyId: string) => {
-  try {
-    const [propertyResponse, agentDetails] = await Promise.all([
-      propertyApi.get('/propertyV2', {
-        params: { zpid: propertyId }
-      }),
-      getListingAgentDetails(propertyId)
-    ]);
-
-    const data = propertyResponse.data?.data;
-    return {
-      id: propertyId,
-      address: data?.address?.streetAddress,
-      city: data?.address?.city,
-      state: data?.address?.state,
-      county: data?.county,
-      zipCode: data?.address?.zipcode,
-      price: data?.list_price || 0,
-      beds: data?.bedrooms,
-      baths: data?.bathrooms,
-      sqft: data?.living_area,
-      lotSize: data?.lot_size,
-      imageUrl: data?.photos?.[0] || 'https://via.placeholder.com/600x400?text=No+Image+Available',
-      propertyType: data?.home_type,
-      neighborhood: data?.address?.neighborhood,
-      subdivision: data?.address?.subdivision,
-      yearBuilt: data?.year_built,
-      description: data?.description || 'No description available.',
-      listingAgent: agentDetails,
-      hdpUrl: data?.hdpUrl
-    };
   } catch (error) {
     handleError(error);
   }

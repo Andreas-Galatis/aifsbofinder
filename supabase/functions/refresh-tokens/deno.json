@@ -1,0 +1,13 @@
+{
+    "tasks": {
+      "start": "deno run --allow-net --allow-env index.ts"
+    },
+    "imports": {
+      "npm:@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.7",
+      "npm:axios": "https://esm.sh/axios@1.7.7"
+    },
+    "compilerOptions": {
+      "allowJs": true,
+      "lib": ["deno.window"]
+    }
+  }

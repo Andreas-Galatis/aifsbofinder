@@ -5,7 +5,8 @@
 import axios from 'axios';
 import { PropertyData } from '../types';
 import { isTokenExpired } from '../services/ghlAuth';
-
+import { SearchParams } from '../types';
+import { supabase } from '../lib/supabase';
 
 const GHL_API_BASE = 'https://services.leadconnectorhq.com';
 // delay helper function
@@ -29,18 +30,9 @@ const createGHLClient = () => {
   });
 };
 
-/**
- * Formats a phone number to E.164 format
- */
 const formatPhoneNumber = (phone: string): string => {
-  console.log('📞 Formatting phone number:', phone);
-  // Remove all non-numeric characters
   const cleaned = phone.replace(/\D/g, '');
-  
-  // Add US country code if not present
-  const formatted = cleaned.length === 10 ? `+1${cleaned}` : `+${cleaned}`;
-  console.log('📞 Formatted phone number:', formatted);
-  return formatted;
+  return cleaned.length === 10 ? `+1${cleaned}` : `+${cleaned}`;
 };
 
 /**
@@ -151,7 +143,11 @@ const createOrUpdateContact = async (
 /**
  * Exports property data to GHL as a contact
  */
-export const exportToGHL = async (propertyData: PropertyData): Promise<void> => {
+export const exportToGHL = async (
+  propertyData: PropertyData, 
+  searchParams: SearchParams,
+  progressCallback: (completed: number, total: number) => void = () => {}
+): Promise<void> => {
   console.log('📤 Starting export to GHL:', propertyData);
 
   const token = localStorage.getItem('ghl_access_token');
@@ -230,15 +226,29 @@ export const exportToGHL = async (propertyData: PropertyData): Promise<void> => 
 
     console.log('📝 Prepared contact data:', contactData);
 
+    const currentCount = (searchParams.exportedCount || 0) + 1;
+    const totalCount = searchParams.totalCount || 1;
+
     // Create or update the contact
     const contactId = await createOrUpdateContact(client, locationId, existingContact, contactData);
     console.log('✅ Export completed successfully. Contact ID:', contactId);
 
      
-    // Burst limit: A maximum of 100 API requests per 10 seconds for each Marketplace app 
-    // Daily limit: 200,000 API requests per day for each Marketplace app
-    // Add 300ms rate limit delay
-    await delay(300);
+   // Store the export in search_results without a search_id for manual searches
+    const { error: insertError } = await supabase
+      .from('search_results')
+      .insert({
+        property_data: propertyData,
+        exported_to_ghl: true
+      });
+
+    if (insertError) {
+      console.error('Error storing search result:', insertError);
+      throw new Error(`Failed to store search result: ${insertError.message}`);
+    }
+
+    progressCallback(currentCount, totalCount);
+    await delay(100);
 
   } catch (error) {
     console.error('🚫 Error exporting to AIRES AI:', error);

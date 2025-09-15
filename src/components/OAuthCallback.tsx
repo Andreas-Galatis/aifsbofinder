@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { GHLTokenResponse } from '../types/ghl';
 import { exchangeCodeForToken } from '../services/ghlAuth';
+import { storeTokens } from '../services/tokenService';
+import { setUserContext } from '../lib/supabase';
+import { setGHLLocationId } from '../lib/supabase';
 import { toast } from 'react-toastify';
 
 const OAuthCallback: React.FC = () => {
@@ -13,52 +14,72 @@ const OAuthCallback: React.FC = () => {
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
-        // Extract code and error from searchParams
         const code = searchParams.get('code');
         const error = searchParams.get('error');
 
-        // Handle OAuth errors returned in the URL
         if (error) {
           console.error('OAuth error:', error);
           toast.error(`Authentication error: ${error}`);
           setStatus('Authentication error occurred. Please try again.');
-          navigate('/'); // Redirect to home page
+          navigate('/');
           return;
         }
 
-        // Ensure authorization code exists
         if (!code) {
           console.error('Error: No authorization code received in the callback URL');
           setStatus('Error: No authorization code received.');
           toast.error('Error: No authorization code received.');
-          navigate('/'); // Redirect to home page
+          navigate('/');
           return;
         }
 
-        // Log the authorization code for debugging
-        console.log('Authorization code received:', code);
+        console.log('Starting OAuth callback flow with code');
 
-        // Exchange the authorization code for a token
-        console.log('Exchanging code for token...');
         const tokenData = await exchangeCodeForToken(code);
+        
+        if (!tokenData.locationId) {
+          console.error('No location ID received in token data');
+          throw new Error('No location ID received');
+        }
+        
+        console.log('Token exchange successful, location ID:', tokenData.locationId);
 
-        // Log the received token data
-        console.log('Token received:', tokenData);
-
-        // Store the access token, location ID, and token expiry in localStorage
         localStorage.setItem('ghl_access_token', tokenData.access_token);
         localStorage.setItem('ghl_location_id', tokenData.locationId);
         localStorage.setItem('ghl_token_expiry', String(Date.now() + tokenData.expires_in * 1000));
+        localStorage.setItem('ghl_company_id', tokenData.companyId);
+
+        await setGHLLocationId(tokenData.locationId);
+
+        console.log('Storing tokens in Supabase...');
+
+        try {
+          await storeTokens(
+            tokenData.locationId,
+            tokenData.access_token,
+            tokenData.refresh_token,
+            tokenData.expires_in,
+            tokenData.companyId
+          );
+          console.log('Tokens stored successfully');
+        } catch (tokenError) {
+          console.error('Error storing tokens:', tokenError);
+          // Don't throw here - the authentication was successful, just log the error
+          toast.warning('Authentication successful, but there was an issue storing some settings.');
+        }
 
         setStatus('Authorization successful! Redirecting...');
         toast.success('Successfully connected to AIRES AI!');
-        navigate('/'); // Redirect to home page
+        navigate('/');
       } catch (error: any) {
-        // Handle errors during token exchange
-        console.error('OAuth callback error:', error.response?.data || error.message || error);
+        console.error('OAuth callback error:', error);
+        if (error.response) {
+          console.error('Response data:', error.response.data);
+          console.error('Response status:', error.response.status);
+        }
         setStatus('Authorization failed. Please try again.');
         toast.error('Authorization failed. Please try again.');
-        navigate('/'); // Redirect to home page
+        navigate('/');
       }
     };
 

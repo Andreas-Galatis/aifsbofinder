@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '../lib/supabase';
 import { SearchParams } from '../types';
 import { toast } from 'react-toastify';
 

@@ -4,7 +4,7 @@
 
 export const getLatestCommit = async () => {
   try {
-    const response = await fetch('https://api.github.com/repos/AIreas/aipropertyfinder/commits/main');
+    const response = await fetch('https://api.github.com/repos/Andreas-Galatis/aifsbofinder/commits/main');
     const data = await response.json();
     return data.sha;
   } catch (error) {
@@ -19,5 +19,5 @@ export const checkForUpdates = async (currentVersion: string) => {
 };
 
 export const getRepositoryUrl = () => {
-  return 'https://github.com/AIreas/aipropertyfinder';
+  return 'https://github.com/Andreas-Galatis/aifsbofinder';
 };

@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS scheduled_searches (
 
 ALTER TABLE scheduled_searches ENABLE ROW LEVEL SECURITY;
 
-REATE POLICY "Users can manage their own searches with user context"
+CREATE POLICY "Users can manage their own searches with user context"
   ON scheduled_searches
   FOR ALL
   USING (
