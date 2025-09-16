@@ -6,22 +6,44 @@ const GOOGLE_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY');
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const propertyTypeMap = {
-    'Houses': 'isSingleFamily',
-    'Apartments': 'isApartment',
-    'Condos': 'isCondo',
-    'Townhomes': 'isTownhouse',
-    'Manufactured': 'isManufactured',
-    'Lots/Land': 'isLotLand',
-    'Multi-family': 'isMultiFamily'
-  };
+// Property type mapping with API parameters
+const propertyTypeMap: { [key: string]: string } = {
+  'Houses': 'isSingleFamily',
+  'Apartments': 'isApartment',
+  'Condos': 'isCondo',
+  'Townhomes': 'isTownhouse',
+  'Manufactured': 'isManufactured',
+  'Lots/Land': 'isLotLand',
+  'Multi-family': 'isMultiFamily'
+};
 
+// All property type parameters
 const allPropertyTypes = Object.values(propertyTypeMap);
+
+// Helper function to make API requests
+const makeApiRequest = async (endpoint: string, params: Record<string, string>) => {
+  const queryParams = new URLSearchParams(params);
+  const url = `https://${RAPID_API_HOST}${endpoint}?${queryParams}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'X-RapidAPI-Key': RAPID_API_KEY,
+      'X-RapidAPI-Host': RAPID_API_HOST,
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.json();
+};
 
 const mapProperty = (property: any) => {
   // Format address for URL
   const formattedAddress = `${property.streetAddress}-${property.city}-${property.state}-${property.zipcode}`.replace(/\s+/g, '-');
-  
+
   return {
     id: property.zpid,
     address: property.streetAddress,
@@ -54,13 +76,11 @@ const mapProperty = (property: any) => {
 const getListingAgentDetails = async (zpid: string) => {
   try {
     await delay(500);
-    const response = await propertyApi.get('/propertyV2', {
-      params: { zpid }
-    });
+    const data = await makeApiRequest('/propertyV2', { zpid });
 
-    const propertyData = response.data || {};
-    const yearBuilt = response.data?.yearBuilt;
-    const county = response.data?.county;
+    const propertyData = data || {};
+    const yearBuilt = data?.yearBuilt;
+    const county = data?.county;
 
     // Check if property is FSBO
     const isFSBO = propertyData.listing_sub_type?.is_FSBO === true ||
@@ -110,8 +130,8 @@ export const searchProperties = async (
     );
 
     // If specific types are selected, set only those to true
-    if (searchParams.homeType.length > 0) {
-      searchParams.homeType.forEach(type => {
+    if (searchParams.homeType && searchParams.homeType.length > 0) {
+      searchParams.homeType.forEach((type: string) => {
         if (propertyTypeMap[type]) {
           propertyTypeParams[propertyTypeMap[type]] = true;
         }
@@ -129,41 +149,43 @@ export const searchProperties = async (
     for (let page = 1; page <= totalPages; page++) {
       const fetchPage = async () => {
         try {
-          const response = await propertyApi.get('/search', {
-            params: {
-              location: `${searchParams.location}, ${searchParams.state}`,
-              status: 'forSale',
-              page: page.toString(),
-              price_min: searchParams.minPrice || '0',
-              price_max: searchParams.maxPrice || '10000000',
-              beds_min: searchParams.beds || '0',
-              baths_min: searchParams.baths || '0',
-              sqft_min: searchParams.minSqft || '0',
-              sqft_max: searchParams.maxSqft || '10000000',
-              built_min: searchParams.minYear || '1800',
-              built_max: searchParams.maxYear || '2025',
-              listing_type: 'by_owner_other',
-              isForSaleByOwner: 'true', // Force FSBO
-              isForSaleByAgent: 'false', // Exclude agent listings
-              isComingSoon: 'false',
-              isForSaleForeclosure: 'false',
-              isAuction: 'false',
-              isNewConstruction: 'false',
-              ...propertyTypeParams,
-            },
-          });
+          const apiParams = {
+            location: `${searchParams.location}, ${searchParams.state}`,
+            status: 'forSale',
+            page: page.toString(),
+            price_min: searchParams.minPrice || '0',
+            price_max: searchParams.maxPrice || '10000000',
+            beds_min: searchParams.beds || '0',
+            baths_min: searchParams.baths || '0',
+            sqft_min: searchParams.minSqft || '0',
+            sqft_max: searchParams.maxSqft || '10000000',
+            built_min: searchParams.minYear || '1800',
+            built_max: searchParams.maxYear || '2025',
+            listing_type: 'by_owner_other',
+            isForSaleByOwner: 'true', // Force FSBO
+            isForSaleByAgent: 'false', // Exclude agent listings
+            isComingSoon: 'false',
+            isForSaleForeclosure: 'false',
+            isAuction: 'false',
+            isNewConstruction: 'false',
+            ...Object.fromEntries(
+              Object.entries(propertyTypeParams).map(([key, value]) => [key, value.toString()])
+            )
+          };
 
-          console.log('FSBO Search Params:', response.config.params);
-          console.log('FSBO Property Search Response:', page, response.data);
+          const data = await makeApiRequest('/search', apiParams);
 
-          const pageProperties = (response.data.results || []).map(mapProperty);
+          console.log('FSBO Search Params:', apiParams);
+          console.log('FSBO Property Search Response:', page, data);
+
+          const pageProperties = (data?.results || []).map(mapProperty);
           allProperties.push(...pageProperties);
 
-          onPageLoaded(pageProperties);
+          // onPageLoaded(pageProperties);
 
           // Extract totalPages from the first response
-          if (page === 1 && response.data.totalPages) {
-            totalPages = response.data.totalPages;
+          if (page === 1 && data?.totalPages) {
+            totalPages = data.totalPages;
           }
 
           return pageProperties.length > 0;
@@ -184,19 +206,24 @@ export const searchProperties = async (
     const fsboProperties = [];
 
     for (const property of allProperties) {
-      const agentDetails = await getListingAgentDetails(property.id);
-      if (agentDetails && agentDetails.isFSBO) {
-        property.listingAgent = agentDetails;
-        property.yearBuilt = agentDetails.yearBuilt;
-        property.county = agentDetails.county;
-        fsboProperties.push(property);
+      try {
+        const agentDetails = await getListingAgentDetails(property.id);
+        if (agentDetails && agentDetails.isFSBO) {
+          property.listingAgent = agentDetails;
+          property.yearBuilt = agentDetails.yearBuilt;
+          property.county = agentDetails.county;
+          fsboProperties.push(property);
+        }
+      } catch (error) {
+        console.error(`Error processing property ${property.id}:`, error);
+        // Continue with other properties
       }
     }
 
     return {
       properties: fsboProperties,
       total: fsboProperties.length,
-      loadAgentDetails: async (callback) => {
+      loadAgentDetails: async (callback: (id: string, agent: any) => void) => {
         // Agent details already loaded during filtering
         fsboProperties.forEach(property => {
           callback(property.id, property.listingAgent);

@@ -46,7 +46,8 @@ async function handleScheduledSearches() {
 
     try {
       // Run the property search
-      const properties = await searchProperties(search.search_params);
+      const searchResult = await searchProperties(search.search_params);
+      const properties = searchResult.properties;
       console.log(`Found ${properties.length} properties for search ${search.id}`);
 
       // Store results in database
