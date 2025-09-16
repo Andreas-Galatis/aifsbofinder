@@ -126,6 +126,7 @@ export const updateScheduledSearch = async (
   }
 
   // First verify the search exists and belongs to the user
+  /*
   const { data: searches, error: fetchError } = await supabase
     .from('scheduled_searches')
     .select('*')
@@ -140,6 +141,7 @@ export const updateScheduledSearch = async (
   if (!searches || searches.length === 0) {
     throw new Error('Scheduled search not found');
   }
+  */
 
   // Then perform the update
   const { data, error } = await supabase
