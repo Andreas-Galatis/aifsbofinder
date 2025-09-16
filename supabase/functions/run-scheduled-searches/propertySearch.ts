@@ -116,44 +116,49 @@ export const searchProperties = async (
 
     for (let page = 1; page <= totalPages; page++) {
       const fetchPage = async () => {
-        const response = await propertyApi.get('/search', {
-          params: {
-            location: `${searchParams.location}, ${searchParams.state}`,
-            status: 'forSale',
-            page: page.toString(),
-            price_min: searchParams.minPrice || '0',
-            price_max: searchParams.maxPrice || '10000000',
-            beds_min: searchParams.beds || '0',
-            baths_min: searchParams.baths || '0',
-            sqft_min: searchParams.minSqft || '0',
-            sqft_max: searchParams.maxSqft || '10000000',
-            built_min: searchParams.minYear || '1800',
-            built_max: searchParams.maxYear || '2025',
-            listing_type: 'by_owner_other',
-            isForSaleByOwner: 'true', // Force FSBO
-            isForSaleByAgent: 'false', // Exclude agent listings
-            isComingSoon: 'false',
-            isForSaleForeclosure: 'false',
-            isAuction: 'false',
-            isNewConstruction: 'false',
-            ...propertyTypeParams,
-          },
-        });
+        try {
+          const response = await propertyApi.get('/search', {
+            params: {
+              location: `${searchParams.location}, ${searchParams.state}`,
+              status: 'forSale',
+              page: page.toString(),
+              price_min: searchParams.minPrice || '0',
+              price_max: searchParams.maxPrice || '10000000',
+              beds_min: searchParams.beds || '0',
+              baths_min: searchParams.baths || '0',
+              sqft_min: searchParams.minSqft || '0',
+              sqft_max: searchParams.maxSqft || '10000000',
+              built_min: searchParams.minYear || '1800',
+              built_max: searchParams.maxYear || '2025',
+              listing_type: 'by_owner_other',
+              isForSaleByOwner: 'true', // Force FSBO
+              isForSaleByAgent: 'false', // Exclude agent listings
+              isComingSoon: 'false',
+              isForSaleForeclosure: 'false',
+              isAuction: 'false',
+              isNewConstruction: 'false',
+              ...propertyTypeParams,
+            },
+          });
 
-        console.log('FSBO Search Params:', response.config.params);
-        console.log('FSBO Property Search Response:', page, response.data);
+          console.log('FSBO Search Params:', response.config.params);
+          console.log('FSBO Property Search Response:', page, response.data);
 
-        const pageProperties = (response.data.results || []).map(mapProperty);
-        allProperties.push(...pageProperties);
+          const pageProperties = (response.data.results || []).map(mapProperty);
+          allProperties.push(...pageProperties);
 
-        onPageLoaded(pageProperties);
+          onPageLoaded(pageProperties);
 
-        // Extract totalPages from the first response
-        if (page === 1 && response.data.totalPages) {
-          totalPages = response.data.totalPages;
+          // Extract totalPages from the first response
+          if (page === 1 && response.data.totalPages) {
+            totalPages = response.data.totalPages;
+          }
+
+          return pageProperties.length > 0;
+        } catch (error) {
+          console.error(`Error fetching page ${page}:`, error);
+          throw error;
         }
-
-        return pageProperties.length > 0;
       };
 
       const hasMore = await fetchPage();
@@ -188,6 +193,7 @@ export const searchProperties = async (
     };
 
   } catch (error) {
-    handleError(error);
+    console.error('Error in searchProperties:', error);
+    throw error;
   }
 };
