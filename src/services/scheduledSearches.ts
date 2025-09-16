@@ -117,7 +117,7 @@ export const updateScheduledSearch = async (
   }
 
   const { error: setLocationError } = await supabase.rpc('set_ghl_location_id', {
-    location_id: locationId
+    location_id: locationId 
   });
 
   if (setLocationError) {
@@ -126,7 +126,7 @@ export const updateScheduledSearch = async (
   }
 
   // First verify the search exists and belongs to the user
-  /*
+  
   const { data: searches, error: fetchError } = await supabase
     .from('scheduled_searches')
     .select('*')
@@ -141,7 +141,7 @@ export const updateScheduledSearch = async (
   if (!searches || searches.length === 0) {
     throw new Error('Scheduled search not found');
   }
-  */
+  
 
   // Then perform the update
   const { data, error } = await supabase
