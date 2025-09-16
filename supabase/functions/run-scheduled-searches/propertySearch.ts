@@ -6,6 +6,18 @@ const GOOGLE_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY');
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+const propertyTypeMap = {
+    'Houses': 'isSingleFamily',
+    'Apartments': 'isApartment',
+    'Condos': 'isCondo',
+    'Townhomes': 'isTownhouse',
+    'Manufactured': 'isManufactured',
+    'Lots/Land': 'isLotLand',
+    'Multi-family': 'isMultiFamily'
+  };
+
+const allPropertyTypes = Object.values(propertyTypeMap);
+
 const mapProperty = (property: any) => {
   // Format address for URL
   const formattedAddress = `${property.streetAddress}-${property.city}-${property.state}-${property.zipcode}`.replace(/\s+/g, '-');
