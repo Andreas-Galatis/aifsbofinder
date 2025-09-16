@@ -37,6 +37,8 @@ export interface PropertyData {
 
 // Search parameters interface for property queries
 export interface SearchParams {
+  totalCount: number;
+  exportedCount: number;
   // Location parameters
   location: string;          // City name
   state: string;            // State code (e.g., CA)

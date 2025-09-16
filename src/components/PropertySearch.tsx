@@ -64,6 +64,7 @@ export const PropertySearch: React.FC = () => {
     return date.toISOString();
   };
 
+  /*
   const exportProperties = async (propertiesToExport: any[]) => {
     try {
       // export properties sequentially
@@ -73,6 +74,35 @@ export const PropertySearch: React.FC = () => {
       toast.success('Properties exported to AIRES AI successfully');
     } catch {
       toast.error('Failed to export properties to AIRES AI');
+    }
+  };
+  */
+
+  const [uiLoading, setuiLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const exportProperties = async (propertiesToExport: any[]) => {
+    try {
+      setuiLoading(true);
+      setProgress(0);
+
+      const totalProperties = propertiesToExport.length;
+      let completedCount = 0;
+
+      for (let i = 0; i < totalProperties; i++) {
+        await exportToGHL(propertiesToExport[i], searchParams, () => {
+          completedCount++;
+          const progress = Math.round((completedCount / totalProperties) * 100);
+          console.log(`📊 Export Progress: ${progress}%`);
+          setProgress(progress);
+        });
+      }
+
+      // await Promise.all(propertiesToExport.map(property => exportToGHL(property, searchParams)));
+      toast.success('Properties exported to AIRES AI successfully');
+    } catch (error) {
+      toast.error('Failed to export properties to AIRES AI');
+    } finally {
+      setuiLoading(false);
     }
   };
 
@@ -153,6 +183,23 @@ export const PropertySearch: React.FC = () => {
     ...property,
     listingAgent: agentDetails[property.id] || property.listingAgent,
   }));
+
+   if (uiLoading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900">Exporting Properties...</h3>
+          <div className="w-64 bg-gray-200 rounded-full h-4">
+            <div 
+              className="bg-blue-500 h-4 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+          <p className="mt-2 text-gray-700">{progress}% completed</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
