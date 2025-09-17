@@ -208,9 +208,6 @@ export const PropertySearch: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900">
             Find FSBO Properties
           </h2>
-          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-            For Sale By Owner Only
-          </span>
         </div>
         {/* Search Input Fields */}
         <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
