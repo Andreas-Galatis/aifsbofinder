@@ -322,7 +322,7 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <h3 className="font-medium">
-                          Search for {search.search_params.propertyType} in {search.search_params.city} {search.search_params.state} {search.search_params.zipCode}
+                          Search for {search.search_params.propertyType} in {search.search_params.location}, {search.search_params.state} 
                         </h3>
                         <p className="text-sm text-gray-500">
                           Frequency: Every {search.frequency_days} days
