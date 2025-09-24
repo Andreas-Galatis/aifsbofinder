@@ -214,14 +214,7 @@ export const exportToGHL = async (
         propertyData.state,
         propertyData.county,
         `fsbo-${new Date().toLocaleDateString()}`,
-      ],
-      customFields: {
-        property_price: propertyData.price,
-        beds: propertyData.beds,
-        baths: propertyData.baths,
-        sqft: propertyData.sqft,
-        year_built: propertyData.yearBuilt
-      }
+      ]
     };
 
     console.log('📝 Prepared contact data:', contactData);
