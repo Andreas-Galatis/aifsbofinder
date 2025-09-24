@@ -31,6 +31,8 @@ const PropertyList: React.FC<PropertyListProps> = ({ properties = [], loading, s
   const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
   const [selectedProperty, setSelectedProperty] = useState<PropertyData | null>(null);
   const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set());
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
   const isAllSelected = properties.length > 0 && properties.every(p => selectedProperties.has(p.id));
   
 
@@ -42,34 +44,55 @@ const PropertyList: React.FC<PropertyListProps> = ({ properties = [], loading, s
       }
       await exportToGHL(property, searchParams);
       toast.success('Property exported to AIRES AI successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to export property to AIRES AI');
     }
   };
 
   const handleExportAll = async () => {
     try {
-      for (const property of properties) {
-        await exportToGHL(property, searchParams);
+      setExportLoading(true);
+      setExportProgress(0);
+
+      const totalProperties = properties.length;
+      let completedCount = 0;
+
+      for (let i = 0; i < totalProperties; i++) {
+        await exportToGHL(properties[i], searchParams);
+        completedCount++;
+        const progress = Math.round((completedCount / totalProperties) * 100);
+        setExportProgress(progress);
       }
+
       toast.success('All properties exported to AIRES AI successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to export properties to AIRES AI');
+    } finally {
+      setExportLoading(false);
     }
   };
 
   const handleExportSelected = async () => {
     try {
+      setExportLoading(true);
+      setExportProgress(0);
+
       const selectedProps = properties.filter(p => selectedProperties.has(p.id));
-      // Export each selected property sequentially
+      const totalProperties = selectedProps.length;
+      let completedCount = 0;
+
       for (const property of selectedProps) {
         await exportToGHL(property, searchParams);
+        completedCount++;
+        const progress = Math.round((completedCount / totalProperties) * 100);
+        setExportProgress(progress);
       }
-      // Alternatively, export all selected properties in parallel
-      //await Promise.all(selectedProps.map(property => exportToGHL(property, searchParams)));
+
       toast.success('Selected properties exported to AIRES AI successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to export properties to AIRES AI');
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -102,6 +125,23 @@ const PropertyList: React.FC<PropertyListProps> = ({ properties = [], loading, s
   const formatNumber = (num: number = 0) => {
     return num.toLocaleString();
   };
+
+  if (exportLoading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900">Exporting Properties...</h3>
+          <div className="w-64 bg-gray-200 rounded-full h-4">
+            <div
+              className="bg-blue-500 h-4 rounded-full transition-all duration-300"
+              style={{ width: `${exportProgress}%` }}
+            ></div>
+          </div>
+          <p className="mt-2 text-gray-700">{exportProgress}% completed</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

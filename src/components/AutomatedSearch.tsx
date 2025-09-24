@@ -3,12 +3,12 @@ import { Clock, Save, AlertCircle, X, Edit2, Trash2, Bot } from 'lucide-react';
 import { SearchParams } from '../types';
 import { toast } from 'react-toastify';
 import SearchFilters from './SearchFilters';
-import { 
-  createScheduledSearch, 
-  getScheduledSearches, 
-  updateScheduledSearch, 
+import {
+  createScheduledSearch,
+  getScheduledSearches,
+  updateScheduledSearch,
   deleteScheduledSearch,
-  getMaxSearchesLimit 
+  getMaxSearchesLimit
 } from '../services/scheduledSearches';
 import { Database } from '../lib/database.types';
 
@@ -73,12 +73,15 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
         currentSearchParams,
         parseInt(frequency, 10)
       );
-      
-      setSavedSearches(prev => [newSearch, ...prev]);
-      toast.success('Search scheduled and initial search completed!');
 
-      // Re-fetch the searches and limit to ensure UI is up to date
-      await loadSearches();
+      // Immediately update the UI with the new search
+      setSavedSearches(prev => [newSearch, ...prev]);
+
+      // Also update the max limit by re-fetching just that value
+      const updatedLimit = await getMaxSearchesLimit(locationId);
+      setMaxSearchesLimit(updatedLimit);
+
+      toast.success('Search scheduled and initial search completed!');
 
     } catch (error) {
       console.error('Error saving scheduled search:', error);

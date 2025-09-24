@@ -99,7 +99,7 @@ export const PropertySearch: React.FC = () => {
 
       // await Promise.all(propertiesToExport.map(property => exportToGHL(property, searchParams)));
       toast.success('Properties exported to AIRES AI successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to export properties to AIRES AI');
     } finally {
       setuiLoading(false);
@@ -184,13 +184,27 @@ export const PropertySearch: React.FC = () => {
     listingAgent: agentDetails[property.id] || property.listingAgent,
   }));
 
+  if (isSearching || isLoading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900">Searching for Properties...</h3>
+          <div className="flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-aires-blue"></div>
+            <p className="text-gray-700">Please wait while we find FSBO properties</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
    if (uiLoading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center z-50">
         <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
           <h3 className="text-lg font-semibold mb-4 text-gray-900">Exporting Properties...</h3>
           <div className="w-64 bg-gray-200 rounded-full h-4">
-            <div 
+            <div
               className="bg-blue-500 h-4 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             ></div>
@@ -235,11 +249,20 @@ export const PropertySearch: React.FC = () => {
           </div>
           <button
             onClick={handleSearch}
-            disabled={isLoading}
+            disabled={isLoading || isSearching}
             className="flex items-center justify-center px-6 py-2 bg-aires-blue text-white rounded-lg hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-aires-green focus:ring-offset-2 disabled:opacity-50"
           >
-            <Search className="h-5 w-5 mr-2" />
-            Search
+            {isLoading || isSearching ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Searching...
+              </>
+            ) : (
+              <>
+                <Search className="h-5 w-5 mr-2" />
+                Search
+              </>
+            )}
           </button>
         </div>
 
