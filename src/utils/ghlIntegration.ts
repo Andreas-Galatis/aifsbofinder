@@ -4,7 +4,7 @@
  */
 import axios from 'axios';
 import { PropertyData } from '../types';
-import { isTokenExpired } from '../services/ghlAuth';
+import { hasValidGHLCredentials } from '../services/ghlAuth';
 import { SearchParams } from '../types';
 import { supabase } from '../lib/supabase';
 
@@ -150,22 +150,14 @@ export const exportToGHL = async (
 ): Promise<void> => {
   console.log('📤 Starting export to GHL:', propertyData);
 
-  const token = localStorage.getItem('ghl_access_token');
-  const locationId = localStorage.getItem('ghl_location_id');
-
-  console.log('🔑 Checking credentials:', {
-    hasToken: !!token,
-    hasLocation: !!locationId
-  });
-
-  if (!token || !locationId) {
-    console.error('❌ Missing GHL credentials');
+  if (!hasValidGHLCredentials()) {
+    console.error('❌ Invalid GHL credentials or token expired');
     throw new Error('AIRES AI authentication required');
   }
 
-  if (isTokenExpired()) {
-    console.error('❌ GHL token expired');
-    throw new Error('AIRES AI token expired');
+  const locationId = localStorage.getItem('ghl_location_id');
+  if (!locationId) {
+    throw new Error('AIRES AI location ID missing');
   }
 
   const client = createGHLClient();

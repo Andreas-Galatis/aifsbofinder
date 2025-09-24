@@ -154,6 +154,7 @@ export const PropertySearch: React.FC = () => {
 
   // Pass this function to AutomatedSearch
   const handleAutomatedSearch = async (): Promise<{exported: number, total: number}> => {
+    setIsSearching(true);
     setProperties([]);
     setAgentDetails({});
     setFoundCount(0);
@@ -190,6 +191,7 @@ export const PropertySearch: React.FC = () => {
       toast.error('Failed to perform search');
       return { exported: 0, total: 0 };
     } finally {
+      setIsSearching(false);
       clearInterval(messageInterval);
       setSearchMessage('');
     }

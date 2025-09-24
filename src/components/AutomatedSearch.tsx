@@ -69,8 +69,30 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
     loadSearches();
   }, []);
 
+  // Monitor authentication state changes
+  useEffect(() => {
+    const checkAuth = () => {
+      const authState = hasValidGHLCredentials();
+      setIsAuthenticated(authState);
+
+      // If auth state changed and they're not authenticated, clear searches
+      if (!authState) {
+        setSavedSearches([]);
+      }
+    };
+
+    // Check on mount
+    checkAuth();
+
+    // Check every 30 seconds for token expiry
+    const interval = setInterval(checkAuth, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const saveScheduledSearch = async () => {
     try {
+      // Double-check authentication before doing anything
       if (!hasValidGHLCredentials()) {
         toast.error('Please connect to AIRES AI first');
         window.location.href = getAuthUrl();
@@ -84,7 +106,7 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
         return;
       }
 
-      // Perform initial search
+      // Perform initial search with progress UI
       const searchResult = await onSearch();
 
       // Create scheduled search in database

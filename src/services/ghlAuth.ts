@@ -124,13 +124,15 @@ export const hasValidGHLCredentials = () => {
   const hasToken = !!localStorage.getItem('ghl_access_token');
   const hasLocation = !!localStorage.getItem('ghl_location_id');
   const hasCompanyId = !!localStorage.getItem('ghl_company_id');
-  
+  const tokenNotExpired = !isTokenExpired();
+
   console.log('🔑 Credentials check:', {
     hasToken,
     hasLocation,
     hasCompanyId,
-    isValid: hasToken && hasLocation && hasCompanyId
+    tokenNotExpired,
+    isValid: hasToken && hasLocation && hasCompanyId && tokenNotExpired
   });
-  
-  return hasToken && hasLocation && hasCompanyId;
+
+  return hasToken && hasLocation && hasCompanyId && tokenNotExpired;
 };
