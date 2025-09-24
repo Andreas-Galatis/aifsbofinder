@@ -123,6 +123,9 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
       const updatedLimit = await getMaxSearchesLimit(locationId);
       setMaxSearchesLimit(updatedLimit);
 
+      // Force a reload of all searches to ensure UI is in sync
+      await loadSearches();
+
       // Show contextual success message based on search results
       if (searchResult.total === 0) {
         toast.success('AIRES agent assigned! No properties found at this time, but your agent will keep searching.');
