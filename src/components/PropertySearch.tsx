@@ -162,8 +162,12 @@ export const PropertySearch: React.FC = () => {
     // Start the dynamic messaging for automated search
     const messageInterval = startSearchMessaging();
 
+    // Keep track of all properties found during search
+    let allPropertiesFound: any[] = [];
+
     try {
       const result = await searchProperties({...searchParams, totalCount: 0, exportedCount: 0}, (pageProperties) => {
+        allPropertiesFound = [...allPropertiesFound, ...pageProperties];
         setProperties(prev => {
           const newProperties = [...prev, ...pageProperties];
           setFoundCount(newProperties.length);
@@ -171,17 +175,22 @@ export const PropertySearch: React.FC = () => {
         });
       });
 
-      await result?.loadAgentDetails((propertyId: string, details: any) => {
-        setAgentDetails(prev => ({
-          ...prev,
-          [propertyId]: details
-        }));
-      });
+      // Load agent details for all found properties
+      const agentDetailsMap: Record<string, any> = {};
+      if (result?.loadAgentDetails) {
+        await result.loadAgentDetails((propertyId: string, details: any) => {
+          agentDetailsMap[propertyId] = details;
+          setAgentDetails(prev => ({
+            ...prev,
+            [propertyId]: details
+          }));
+        });
+      }
 
-      // Export the properties after loading agent details
-      const propertiesWithAgents = properties.map(property => ({
+      // Export the properties after loading agent details using the tracked properties
+      const propertiesWithAgents = allPropertiesFound.map(property => ({
         ...property,
-        listingAgent: agentDetails[property.id] || property.listingAgent,
+        listingAgent: agentDetailsMap[property.id] || property.listingAgent,
       }));
 
       const exportResult = await exportProperties(propertiesWithAgents, false);
