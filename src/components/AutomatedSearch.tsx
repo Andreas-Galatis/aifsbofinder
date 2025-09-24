@@ -10,6 +10,7 @@ import {
   deleteScheduledSearch,
   getMaxSearchesLimit
 } from '../services/scheduledSearches';
+import { hasValidGHLCredentials, getAuthUrl } from '../services/ghlAuth';
 import { Database } from '../lib/database.types';
 
 type ScheduledSearch = Database['public']['Tables']['scheduled_searches']['Row'];
@@ -27,28 +28,40 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
   const [editingParams, setEditingParams] = useState<SearchParams | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [maxSearchesLimit, setMaxSearchesLimit] = useState<number>(100);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   
   
   const loadSearches = async () => {
     try {
+      if (!hasValidGHLCredentials()) {
+        console.warn('No valid GHL credentials found');
+        setIsAuthenticated(false);
+        setSavedSearches([]);
+        return;
+      }
+
       const locationId = localStorage.getItem('ghl_location_id');
       if (!locationId) {
         console.warn('No GHL location ID found');
+        setIsAuthenticated(false);
         return;
       }
-      
+
+      setIsAuthenticated(true);
+
       // Load both searches and max limit
       const [searches, maxLimit] = await Promise.all([
         getScheduledSearches(locationId),
         getMaxSearchesLimit(locationId)
       ]);
-      
+
       setSavedSearches(searches);
       setMaxSearchesLimit(maxLimit);
     } catch (error) {
       console.error('Error loading scheduled searches:', error);
       toast.error('Failed to load scheduled searches');
+      setIsAuthenticated(false);
     }
   };
 
@@ -58,9 +71,16 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
 
   const saveScheduledSearch = async () => {
     try {
+      if (!hasValidGHLCredentials()) {
+        toast.error('Please connect to AIRES AI first');
+        window.location.href = getAuthUrl();
+        return;
+      }
+
       const locationId = localStorage.getItem('ghl_location_id');
       if (!locationId) {
         toast.error('Please connect to AIRES AI first');
+        window.location.href = getAuthUrl();
         return;
       }
 
@@ -253,13 +273,18 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
                 {/* Assign Button with Tooltip Container */}
                 <div className="relative">
                   <button
-                    onClick={saveScheduledSearch}
+                    onClick={isAuthenticated ? saveScheduledSearch : () => {
+                      toast.error('Please connect to AIRES AI first');
+                      window.location.href = getAuthUrl();
+                    }}
                     onMouseEnter={() => setShowTooltip(true)}
                     onMouseLeave={() => setShowTooltip(false)}
-                    disabled={isAtLimit}
+                    disabled={isAuthenticated && isAtLimit}
                     className={`flex items-center space-x-2 px-4 py-1.5 rounded-lg transition-all duration-200 shadow-sm ${
-                      isAtLimit 
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                      !isAuthenticated
+                        ? 'bg-gray-300 text-gray-500 hover:bg-gray-400'
+                        : isAtLimit
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         : 'bg-gradient-to-r from-aires-blue to-aires-lightBlue text-white hover:opacity-90'
                     }`}
                   >
@@ -271,7 +296,9 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
                   {showTooltip && (
                     <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 w-64 z-50">
                       <div className="bg-gray-900 text-white text-xs rounded-lg p-2 shadow-lg relative">
-                        {isAtLimit 
+                        {!isAuthenticated
+                          ? 'Please connect to AIRES AI first to assign agents for automated searches'
+                          : isAtLimit
                           ? `You have reached the maximum limit of ${maxSearchesLimit} automated searches. Please delete some existing searches to create new ones.`
                           : 'When selected, the AI agent will automatically make searches for you based on your filters and frequency and send the contacts to AIRES AI'
                         }
@@ -282,7 +309,7 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
                 </div>
 
                 {/* Assigned Agents Counter */}
-                {savedSearches.length > 0 && (
+                {isAuthenticated && savedSearches.length > 0 && (
                   <button
                     onClick={() => setShowModal(true)}
                     className="flex items-center px-2 py-1.5 text-aires-gray hover:text-aires-darkGray bg-white/50 rounded-lg border border-aires-blue/10"
@@ -304,7 +331,7 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
         </div>
       </div>
       
-      {showModal && (
+      {isAuthenticated && showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
