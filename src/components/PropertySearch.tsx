@@ -97,34 +97,63 @@ export const PropertySearch: React.FC = () => {
 
   const [uiLoading, setuiLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const exportProperties = async (propertiesToExport: any[]) => {
-    try {
-      setuiLoading(true);
-      setProgress(0);
+  const exportProperties = async (propertiesToExport: any[], showToasts: boolean = true) => {
+    const totalProperties = propertiesToExport.length;
 
-      const totalProperties = propertiesToExport.length;
+    if (totalProperties === 0) {
+      return { exported: 0, total: 0 };
+    }
+
+    try {
+      if (showToasts) {
+        setuiLoading(true);
+        setProgress(0);
+      }
       let completedCount = 0;
+      let successCount = 0;
 
       for (let i = 0; i < totalProperties; i++) {
-        await exportToGHL(propertiesToExport[i], searchParams, () => {
-          completedCount++;
+        try {
+          await exportToGHL(propertiesToExport[i], {...searchParams, totalCount: 0, exportedCount: 0});
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to export property ${i + 1}:`, error);
+        }
+
+        completedCount++;
+        if (showToasts) {
           const progress = Math.round((completedCount / totalProperties) * 100);
           console.log(`📊 Export Progress: ${progress}%`);
           setProgress(progress);
-        });
+        }
       }
 
-      // await Promise.all(propertiesToExport.map(property => exportToGHL(property, searchParams)));
-      toast.success('Properties exported to AIRES AI successfully');
+      // Only show toast for manual exports
+      if (showToasts) {
+        if (successCount === totalProperties) {
+          toast.success('Properties exported to AIRES AI successfully');
+        } else if (successCount === 0) {
+          toast.error('Failed to export properties to AIRES AI');
+        } else {
+          toast.warning(`Exported ${successCount} of ${totalProperties} properties to AIRES AI`);
+        }
+      }
+
+      return { exported: successCount, total: totalProperties };
     } catch {
-      toast.error('Failed to export properties to AIRES AI');
+      if (showToasts) {
+        toast.error('Failed to export properties to AIRES AI');
+      }
+      return { exported: 0, total: totalProperties };
     } finally {
-      setuiLoading(false);
+      if (showToasts) {
+        setuiLoading(false);
+      }
     }
   };
 
   // Pass this function to AutomatedSearch
-  const handleAutomatedSearch = async () => {
+  const handleAutomatedSearch = async (): Promise<{exported: number, total: number}> => {
     setProperties([]);
     setAgentDetails({});
     setFoundCount(0);
@@ -153,10 +182,13 @@ export const PropertySearch: React.FC = () => {
         ...property,
         listingAgent: agentDetails[property.id] || property.listingAgent,
       }));
-      await exportProperties(propertiesWithAgents);
+
+      const exportResult = await exportProperties(propertiesWithAgents, false);
+      return exportResult;
 
     } catch {
       toast.error('Failed to perform search');
+      return { exported: 0, total: 0 };
     } finally {
       clearInterval(messageInterval);
       setSearchMessage('');

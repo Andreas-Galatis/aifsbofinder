@@ -16,7 +16,7 @@ type ScheduledSearch = Database['public']['Tables']['scheduled_searches']['Row']
 
 interface AutomatedSearchProps {
   currentSearchParams: SearchParams;
-  onSearch: () => Promise<void>;
+  onSearch: () => Promise<{exported: number, total: number}>;
 }
 
 const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, onSearch }) => {
@@ -65,8 +65,8 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
       }
 
       // Perform initial search
-      await onSearch();
-      
+      const searchResult = await onSearch();
+
       // Create scheduled search in database
       const newSearch = await createScheduledSearch(
         locationId,
@@ -81,7 +81,16 @@ const AutomatedSearch: React.FC<AutomatedSearchProps> = ({ currentSearchParams, 
       const updatedLimit = await getMaxSearchesLimit(locationId);
       setMaxSearchesLimit(updatedLimit);
 
-      toast.success('Search scheduled and initial search completed!');
+      // Show contextual success message based on search results
+      if (searchResult.total === 0) {
+        toast.success('AIRES agent assigned! No properties found at this time, but your agent will keep searching.');
+      } else if (searchResult.exported === searchResult.total) {
+        toast.success(`AIRES agent assigned! Found ${searchResult.total} ${searchResult.total === 1 ? 'property' : 'properties'} and exported to AIRES AI.`);
+      } else if (searchResult.exported === 0) {
+        toast.error(`AIRES agent assigned! Found ${searchResult.total} ${searchResult.total === 1 ? 'property' : 'properties'} but export failed.`);
+      } else {
+        toast.warning(`AIRES agent assigned! Found ${searchResult.total} properties, exported ${searchResult.exported} successfully.`);
+      }
 
     } catch (error) {
       console.error('Error saving scheduled search:', error);
