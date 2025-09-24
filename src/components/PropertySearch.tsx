@@ -35,24 +35,30 @@ export const PropertySearch: React.FC = () => {
   const [properties, setProperties] = useState<any[]>([]);
   const [agentDetails, setAgentDetails] = useState<Record<string, any>>({});
   const [isSearching, setIsSearching] = useState(false);
+  const [searchMessage, setSearchMessage] = useState('');
+  const [foundCount, setFoundCount] = useState(0);
 
   // Query hook for fetching property data
   const { data, isLoading, error, refetch } = useQuery(
     ['properties', searchParams],
-    () => searchProperties(searchParams, (pageProperties) => {
-      setProperties((prev) => [...prev, ...pageProperties]); // Stream results
+    () => searchProperties({...searchParams, totalCount: 0, exportedCount: 0}, (pageProperties) => {
+      setProperties((prev) => {
+        const newProperties = [...prev, ...pageProperties];
+        setFoundCount(newProperties.length);
+        return newProperties;
+      }); // Stream results
     }),
     {
       enabled: false, // Don't fetch automatically on mount
       onSuccess: (data) => {
-        data?.loadAgentDetails((propertyId, details) => {
+        data?.loadAgentDetails((propertyId: string, details: any) => {
           setAgentDetails(prev => ({
             ...prev,
             [propertyId]: details
           }));
         });
       },
-      onError: (err) => {
+      onError: () => {
         toast.error('Failed to fetch properties. Please check your API settings.');
       }
     }
@@ -62,6 +68,31 @@ export const PropertySearch: React.FC = () => {
     const date = new Date();
     date.setDate(date.getDate() + parseInt(days, 10));
     return date.toISOString();
+  };
+
+  // Dynamic search messages
+  const searchMessages = [
+    'Searching high and low for properties...',
+    'Finding For Sale By Owner gems...',
+    'Pinpointing matches that meet your criteria...',
+    'Collecting contact information...',
+    'Calling up our secret agent sources...',
+    'Making a list and checking it twice...',
+    'Making sure the photos match the vibe…',
+    'Digging for that diamond-in-the-rough...'
+  ];
+
+  // Function to cycle through search messages
+  const startSearchMessaging = () => {
+    setSearchMessage(searchMessages[0]);
+    let messageIndex = 0;
+
+    const messageInterval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % searchMessages.length;
+      setSearchMessage(searchMessages[messageIndex]);
+    }, 5000); // Change message every 5 seconds
+
+    return messageInterval;
   };
 
   const [uiLoading, setuiLoading] = useState(false);
@@ -96,12 +127,21 @@ export const PropertySearch: React.FC = () => {
   const handleAutomatedSearch = async () => {
     setProperties([]);
     setAgentDetails({});
+    setFoundCount(0);
+
+    // Start the dynamic messaging for automated search
+    const messageInterval = startSearchMessaging();
+
     try {
-      const result = await searchProperties(searchParams, (pageProperties) => {
-        setProperties(prev => [...prev, ...pageProperties]);
+      const result = await searchProperties({...searchParams, totalCount: 0, exportedCount: 0}, (pageProperties) => {
+        setProperties(prev => {
+          const newProperties = [...prev, ...pageProperties];
+          setFoundCount(newProperties.length);
+          return newProperties;
+        });
       });
-      
-      await result?.loadAgentDetails((propertyId, details) => {
+
+      await result?.loadAgentDetails((propertyId: string, details: any) => {
         setAgentDetails(prev => ({
           ...prev,
           [propertyId]: details
@@ -117,6 +157,9 @@ export const PropertySearch: React.FC = () => {
 
     } catch {
       toast.error('Failed to perform search');
+    } finally {
+      clearInterval(messageInterval);
+      setSearchMessage('');
     }
   };
 
@@ -151,16 +194,23 @@ export const PropertySearch: React.FC = () => {
       toast.warning('Please enter both city and state');
       return;
     }
-    setIsSearching(true); // Indicate search is on progress
-    setProperties([]); // Reset properties for new search
-    setAgentDetails({}); // Reset agent details for new search
+
+    setIsSearching(true);
+    setProperties([]);
+    setAgentDetails({});
+    setFoundCount(0);
+
+    // Start the dynamic messaging
+    const messageInterval = startSearchMessaging();
 
     try {
-      await refetch(); // Trigger the query hook
+      await refetch();
     } catch {
       toast.error('Failed to fetch properties. Please try again.');
     } finally {
-      setIsSearching(false); // Mark search as complete
+      setIsSearching(false);
+      clearInterval(messageInterval);
+      setSearchMessage('');
     }
   };
 
@@ -173,11 +223,32 @@ export const PropertySearch: React.FC = () => {
   if (isSearching || isLoading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900">Searching for Properties...</h3>
-          <div className="flex items-center space-x-2">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-aires-blue"></div>
-            <p className="text-gray-700">Please wait while we find FSBO properties</p>
+        <div className="bg-white p-8 rounded-lg shadow-lg flex flex-col items-center max-w-md w-full mx-4">
+          <h3 className="text-xl font-semibold mb-6 text-gray-900">Searching FSBO Properties</h3>
+
+          {/* Property Count Display */}
+          {foundCount > 0 && (
+            <div className="mb-4 p-3 bg-aires-blue/10 rounded-lg border border-aires-blue/20">
+              <p className="text-aires-blue font-semibold text-lg">
+                {foundCount} {foundCount === 1 ? 'property' : 'properties'} found
+              </p>
+            </div>
+          )}
+
+          {/* Dynamic Message */}
+          <div className="mb-6 text-center">
+            <p className="text-gray-700 text-base mb-2">{searchMessage || 'Please wait while we find FSBO properties'}</p>
+          </div>
+
+          {/* Loading Animation */}
+          <div className="flex flex-col items-center space-y-3">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-3 border-aires-blue"></div>
+            <div className="flex space-x-1">
+              <div className="h-2 w-2 bg-aires-blue rounded-full animate-pulse"></div>
+              <div className="h-2 w-2 bg-aires-blue rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+              <div className="h-2 w-2 bg-aires-blue rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+            </div>
+            <p className="text-sm text-gray-500">This may take a few moments...</p>
           </div>
         </div>
       </div>
@@ -258,8 +329,8 @@ export const PropertySearch: React.FC = () => {
           setSearchParams={setSearchParams} />
 
         {/* Add AutomatedSearch component */}
-        <AutomatedSearch 
-          currentSearchParams={searchParams}
+        <AutomatedSearch
+          currentSearchParams={{...searchParams, totalCount: 0, exportedCount: 0}}
           onSearch={handleAutomatedSearch} />
       </div>
 
@@ -267,8 +338,8 @@ export const PropertySearch: React.FC = () => {
       <PropertyList
         properties={combinedProperties}
         loading={isLoading}
-        searchParams={searchParams}
-        
+        searchParams={{...searchParams, totalCount: 0, exportedCount: 0}}
+
       />
     </div>
   );
