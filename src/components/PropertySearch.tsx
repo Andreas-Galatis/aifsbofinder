@@ -64,20 +64,6 @@ export const PropertySearch: React.FC = () => {
     return date.toISOString();
   };
 
-  /*
-  const exportProperties = async (propertiesToExport: any[]) => {
-    try {
-      // export properties sequentially
-      for (const property of propertiesToExport) {
-        await exportToGHL(property);
-      }
-      toast.success('Properties exported to AIRES AI successfully');
-    } catch {
-      toast.error('Failed to export properties to AIRES AI');
-    }
-  };
-  */
-
   const [uiLoading, setuiLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const exportProperties = async (propertiesToExport: any[]) => {
