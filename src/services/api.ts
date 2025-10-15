@@ -94,10 +94,25 @@ const getListingAgentDetails = async (zpid: string) => {
       return null;
     }
 
-    // Extract FSBO phone number
-    const fsboPhone = propertyData.listing_agent?.phone ?
-      `${propertyData.listing_agent.phone.areacode || ''} ${propertyData.listing_agent.phone.prefix || ''} ${propertyData.listing_agent.phone.number || ''}`.trim() :
-      'N/A';
+    // Extract FSBO phone number from new API structure
+    const fsboPhone = (() => {
+      try {
+        // Navigate: listedBy[0].elements[0-n] to find element with id: "PHONE"
+        const listedBy = propertyData.listedBy;
+        if (Array.isArray(listedBy) && listedBy.length > 0) {
+          const elements = listedBy[0].elements;
+          if (Array.isArray(elements)) {
+            const phoneElement = elements.find((el: any) => el.id === "PHONE");
+            if (phoneElement && phoneElement.text) {
+              return phoneElement.text; // Returns "(202) 344-7523" format
+            }
+          }
+        }
+        return 'N/A';
+      } catch {
+        return 'N/A';
+      }
+    })();
 
     return {
       name: 'Property Owner',
